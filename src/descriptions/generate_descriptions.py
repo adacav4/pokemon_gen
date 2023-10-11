@@ -1,6 +1,8 @@
+import os
 import pandas as pd
 import openai
-
+import torch
+from diffusers import DiffusionPipeline
 
 openai.api_key = "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"
 
@@ -35,7 +37,7 @@ def get_pokemon_description(pokemon):
     return response['choices'][0]['message']['content']
 
 
-def generate_pokemon_image(pokemon_name, pokemon_description):
+def generate_pokemon_image_dalle(pokemon_name, pokemon_description):
     static_prompt = f"{pokemon_name} - a Pokémon creature resembling "
     post_description = ". Designed in the style of traditional cartoon Pokémon images with a black background."
 
@@ -59,12 +61,36 @@ def generate_pokemon_image(pokemon_name, pokemon_description):
     return image_url
 
 
-def initialize_description_dataset(df):
+def generate_pokemon_image_HF(pokemon_name, pokemon_description, generator):
+    static_prompt = f"{pokemon_name} - a Pokémon creature resembling "
+    post_description = ". Designed in the style of traditional cartoon Pokémon images with a black background."
+
+    # Calculate the maximum space available for the description
+    available_space_for_description = 1000 - len(static_prompt) - len(post_description)
+
+    # If the description exceeds the available space, trim it.
+    if len(pokemon_description) > available_space_for_description:
+        pokemon_description = pokemon_description[:available_space_for_description - 3] + "..."
+
+    # Construct the complete prompt
+    prompt = static_prompt + pokemon_description + post_description
+
+    image = generator(prompt).images[0]
+
+    # Save the image to a local path
+    image_path = os.path.join(f"../../data/generated_outputs/images/{pokemon_name}.png")
+    image.save(image_path)
+
+    return image_path
+
+
+def initialize_description_dataset(df, image_gen='dalle', generator=None):
     names = []
     descriptions = []
     image_urls = []  # Storing the URLs of the generated images
 
-    for _, row in df.iterrows():
+    for index, row in df.iterrows():
+        print(f"Starting name/description generation for pokemon {index + 1}...")
         description_output = get_pokemon_description(row)
         split_output = description_output.split("|")
 
@@ -75,18 +101,32 @@ def initialize_description_dataset(df):
 
             names.append(name)
             descriptions.append(description)
+            image_url = "Image generation failed"
 
-            try:
-                image_url = generate_pokemon_image(name, description)
-                image_urls.append(image_url)  # Store the generated image URL
-            except openai.error.OpenAIError as e:
-                # Handle any exception from OpenAI's API
-                print(f"Failed to generate image for {name}. Reason: {e}\n")
-                image_urls.append("Image generation failed")
+            print(f"Starting Image generation for {name}...")
 
-            print(f"Name: {name}\nDescription: {description}\nImage URL: {image_url}\n")
+            if image_gen == 'dalle':
+                try:
+                    image_url = generate_pokemon_image_dalle(name, description)
+                    image_urls.append(image_url)
+                except Exception as e:
+                    print(f"Failed to generate image for {name}. Reason: {e}\n")
+                    image_urls.append(image_url)
+
+                print(f"Name: {name}\nDescription: {description}\nImage: {image_url}\n")
+            elif image_gen == 'hf':
+                try:
+                    image_url = generate_pokemon_image_HF(name, description, generator)
+                    image_urls.append(image_url)
+                except Exception as e:
+                    print(f"Failed to generate image for {name}. Reason: {e}\n")
+                    image_urls.append(image_url)
+                print(f"Name: {name}\nDescription: {description}\nImage Path: {image_url}\n")
+            else:
+                raise Exception("Must provide correct image generator: 'dalle' for DALLE or 'hf' for "
+                                "HuggingFace Stable Diffusion")
+
         else:
-            # Handle the unexpected output here.
             names.append("Unknown Name")
             descriptions.append("Description not found.")
             image_urls.append("Image not available.")
@@ -100,6 +140,13 @@ def initialize_description_dataset(df):
 
 
 if __name__ == "__main__":
+    image_gen = "dalle"
     pokemon_data = pd.read_csv('../../data/generated_outputs/generated_pokemon.csv')
-    initialize_description_dataset(pokemon_data)
+
+    if image_gen == "hf":
+        pipeline = DiffusionPipeline.from_pretrained("justinpinkney/pokemon-stable-diffusion")
+        initialize_description_dataset(pokemon_data, image_gen=image_gen, generator=pipeline)
+    elif image_gen == "dalle":
+        initialize_description_dataset(pokemon_data, image_gen=image_gen)
+
     print("Generated Pokémon names and descriptions to 'generated_pokemon_descriptions.csv'.")
