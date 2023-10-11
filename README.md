@@ -15,7 +15,7 @@ The end goal is to use this GAN with a LLM (like GPT) and an image diffuser mode
 
 ## Installation
 
-To run the code in this repository, you will need a Python environment. Here are the steps to get it up and running:
+To run the code in this repository, you will need a Python/Anaconda environment. Here are the steps to get it up and running:
 
 1. Clone this repository:
 ```bash
@@ -70,7 +70,7 @@ By the end of the generator's architecture, we have a fully-formed set of Pokém
 
 The discriminator is used to evaluate the authenticity of the data created by the generator. It takes in Pokémon statistics, whether real or generated, and assigns a probability score indicating how real the data looks. 
 
-Spectral Normalization is used to stabilize the training of GANs. By constraining the spectral norm (largest singular value) of the weight matrices in the discriminator, the Lipschitz constant is better controlled, stablizing the training dynamic between the generator and discriminator. When training the model, mode collapse was an issue, and spectral normalization helps regulate this. Also, a gradient penalty is used, which can also prevent mode collapse.
+Layer Normalization is used to stabilize the training of GANs. By constraining the spectral norm (largest singular value) of the weight matrices in the discriminator, the Lipschitz constant is better controlled, stablizing the training dynamic between the generator and discriminator. When training the model, mode collapse was an issue, and layer normalization helps regulate this. Also, a gradient penalty is used, which can also prevent mode collapse.
 
 ## Training the Model
 
@@ -79,7 +79,7 @@ The training proceeds in an alternating fashion. First, the discriminator is upd
 To kick off the training, you can execute the command:
 
 ```bash
-python main.py
+python run_train.py
 ```
 
 To start at a model checkpoint please edit the default argument `resume_from_epoch` within `train_gan` to be any 1000th epoch (e.g. `resume_from_epoch=7000`). Ensure that the epoch model file, epoch optimizer files, and the losses files are present within the directory `data/saved_models` or else the model training cannot resume from that ecpoch properly:
