@@ -8,13 +8,13 @@ from src.model.train_gan import train_gan
 def main():
     # Preprocess the Data
     print("Preprocessing data...")
-    filepath = '../data/pokemon.csv'
+    filepath = '../../data/pokemon.csv'
     data = load_data(filepath)
     data = clean_data(data)
     preprocessed_tensor, type1_labels, type2_labels, scaler = preprocess_data(data)
 
     # Save scalar as a pickle file
-    dump(scaler, '../data/scaler.pkl')
+    dump(scaler, '../../data/scaler.pkl')
 
     dataset = PokemonDataset(preprocessed_tensor)
 
@@ -36,8 +36,8 @@ def main():
 
     # Save the trained models
     print("Saving models...")
-    torch.save(generator.state_dict(), '../data/saved_models/generator.pth')
-    torch.save(discriminator.state_dict(), '../data/saved_models/discriminator.pth')
+    torch.save(generator.state_dict(), '../../data/saved_models/generator.pth')
+    torch.save(discriminator.state_dict(), '../../data/saved_models/discriminator.pth')
 
 
 if __name__ == "__main__":

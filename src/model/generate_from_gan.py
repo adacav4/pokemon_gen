@@ -1,7 +1,7 @@
 from joblib import load
 import torch
 import pandas as pd
-from src.model.gan_arcitecture import Generator
+from src.model.gan_architecture import Generator
 
 
 def load_generator(model_path, noise_dim=128, output_dim=228):

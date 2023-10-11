@@ -5,7 +5,9 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.autograd import grad
 from torch.utils.data import DataLoader
-from src.model.gan_arcitecture import Generator, Discriminator
+from src.model.gan_architecture import Generator, Discriminator
+from src.model.early_stopping import EarlyStopping
+
 
 # Hyperparameters
 lr_g = 0.0001
@@ -25,9 +27,7 @@ def gradient_penalty(critic, real, fake, device="cpu"):
 
     out = critic(interpolated)
 
-    grad_out = \
-    grad(outputs=out, inputs=interpolated, grad_outputs=torch.ones_like(out), create_graph=True, retain_graph=True,
-         only_inputs=True)[0]
+    grad_out = grad(outputs=out, inputs=interpolated, grad_outputs=torch.ones_like(out), create_graph=True, retain_graph=True, only_inputs=True)[0]
     penalty = ((grad_out.norm(2, dim=1) - 1) ** 2).mean()
     return penalty
 
@@ -44,6 +44,9 @@ def train_gan(dataset, lr_g=0.0001, lr_d=0.0004, epochs=10000, noise_dim=128, ou
 
     scheduler_g = optim.lr_scheduler.StepLR(optimizer_g, step_size=1000, gamma=0.95)
     scheduler_d = optim.lr_scheduler.StepLR(optimizer_d, step_size=1000, gamma=0.95)
+
+    # Add custom early stopping
+    early_stopping = EarlyStopping(patience=200, delta=0.001)
 
     if resume_from_epoch is not None:
         generator.load_state_dict(torch.load(f"../data/saved_models/generator_epoch_{resume_from_epoch}.pth"))
@@ -70,16 +73,13 @@ def train_gan(dataset, lr_g=0.0001, lr_d=0.0004, epochs=10000, noise_dim=128, ou
             current_batch_size = real_data.size(0)
             real_data = real_data.to(device)
 
-            # Discriminator update
             optimizer_d.zero_grad()
 
             noise = torch.randn(current_batch_size, noise_dim).to(device)
             fake_data = generator(noise)
 
-            real_labels = torch.ones(current_batch_size, 1).to(device) * (
-                    0.9 - 0.1 * torch.rand((current_batch_size, 1)).to(device))
-            fake_labels = torch.zeros(current_batch_size, 1).to(device) + 0.1 * torch.rand((current_batch_size, 1)).to(
-                device)
+            real_labels = torch.ones(current_batch_size, 1).to(device) * (0.9 - 0.1 * torch.rand((current_batch_size, 1)).to(device))
+            fake_labels = torch.zeros(current_batch_size, 1).to(device) + 0.1 * torch.rand((current_batch_size, 1)).to(device)
 
             logits_real = discriminator(real_data)
             logits_fake = discriminator(fake_data.detach())
@@ -94,11 +94,12 @@ def train_gan(dataset, lr_g=0.0001, lr_d=0.0004, epochs=10000, noise_dim=128, ou
 
             d_loss_total += loss_d.item()
 
-            # Generator update
             optimizer_g.zero_grad()
 
             logits_fake = discriminator(fake_data)
-            loss_g = criterion(logits_fake, real_labels)
+            real_features = discriminator(real_data).detach()
+            fake_features = discriminator(fake_data)
+            loss_g = torch.abs(real_features - fake_features).mean()
 
             loss_g.backward()
             optimizer_g.step()
@@ -131,6 +132,11 @@ def train_gan(dataset, lr_g=0.0001, lr_d=0.0004, epochs=10000, noise_dim=128, ou
 
             with open('../data/saved_models/g_losses.pkl', 'wb') as f:
                 pickle.dump(g_losses, f)
+
+        # Early stopping check
+        if early_stopping(d_losses[-1]):
+            print("Early stopping triggered.")
+            break
 
     end_time = time.time()
     elapsed_time = end_time - start_time
