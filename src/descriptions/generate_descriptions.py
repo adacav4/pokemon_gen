@@ -1,7 +1,6 @@
 import os
 import pandas as pd
 import openai
-import torch
 from diffusers import DiffusionPipeline
 
 openai.api_key = "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"
@@ -78,7 +77,7 @@ def generate_pokemon_image_HF(pokemon_name, pokemon_description, generator):
     image = generator(prompt).images[0]
 
     # Save the image to a local path
-    image_path = os.path.join(f"../../data/generated_outputs/images/{pokemon_name}.png")
+    image_path = os.path.join(f"data/generated_outputs/images/{pokemon_name}.png")
     image.save(image_path)
 
     return image_path
@@ -136,7 +135,7 @@ def initialize_description_dataset(df, image_gen='dalle', generator=None):
     df['Image URL'] = image_urls  # Adding a new column for the image URLs
     df = df[['Name', 'Type 1', 'Type 2', 'BST', 'HP', 'Attack', 'Defense', 'Sp. Attack', 'Sp. Defense', 'Speed',
              "Image URL", "Description"]]
-    df.to_csv('../../data/generated_outputs/generated_pokemon_descriptions.csv', index=False)
+    df.to_csv('data/generated_outputs/generated_pokemon_descriptions.csv', index=False)
 
 
 if __name__ == "__main__":

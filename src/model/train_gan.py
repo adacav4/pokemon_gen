@@ -5,8 +5,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.autograd import grad
 from torch.utils.data import DataLoader
-from src.model.gan_architecture import Generator, Discriminator
-from src.model.early_stopping import EarlyStopping
+from model.gan_architecture import Generator, Discriminator
+from model.early_stopping import EarlyStopping
 
 
 # Hyperparameters
@@ -32,7 +32,8 @@ def gradient_penalty(critic, real, fake, device="cpu"):
     return penalty
 
 
-def train_gan(dataset, lr_g=0.0001, lr_d=0.0004, epochs=10000, noise_dim=128, output_dim=42, resume_from_epoch=None):
+def train(dataset, lr_g=0.0001, lr_d=0.0004, epochs=10000, noise_dim=128, output_dim=42, resume_from_epoch=None,
+          print_fct=print, es_flag=True, es_patience=200, es_delta=0.001):
     start_time = time.time()
 
     generator = Generator(noise_dim, output_dim).to(device)
@@ -46,18 +47,19 @@ def train_gan(dataset, lr_g=0.0001, lr_d=0.0004, epochs=10000, noise_dim=128, ou
     scheduler_d = optim.lr_scheduler.StepLR(optimizer_d, step_size=1000, gamma=0.95)
 
     # Add custom early stopping
-    early_stopping = EarlyStopping(patience=200, delta=0.001)
+    if es_flag:
+        early_stopping = EarlyStopping(patience=es_patience, delta=es_delta)
 
     if resume_from_epoch is not None:
-        generator.load_state_dict(torch.load(f"../data/saved_models/generator_epoch_{resume_from_epoch}.pth"))
-        discriminator.load_state_dict(torch.load(f"../data/saved_models/discriminator_epoch_{resume_from_epoch}.pth"))
-        optimizer_g.load_state_dict(torch.load(f"../data/saved_models/optimizer_g_epoch_{resume_from_epoch}.pth"))
-        optimizer_d.load_state_dict(torch.load(f"../data/saved_models/optimizer_d_epoch_{resume_from_epoch}.pth"))
+        generator.load_state_dict(torch.load(f"data/saved_models/generator_epoch_{resume_from_epoch}.pth"))
+        discriminator.load_state_dict(torch.load(f"data/saved_models/discriminator_epoch_{resume_from_epoch}.pth"))
+        optimizer_g.load_state_dict(torch.load(f"data/saved_models/optimizer_g_epoch_{resume_from_epoch}.pth"))
+        optimizer_d.load_state_dict(torch.load(f"data/saved_models/optimizer_d_epoch_{resume_from_epoch}.pth"))
 
-        with open('../data/saved_models/d_losses.pkl', 'rb') as f:
+        with open('data/saved_models/d_losses.pkl', 'rb') as f:
             d_losses = pickle.load(f)
 
-        with open('../data/saved_models/g_losses.pkl', 'rb') as f:
+        with open('data/saved_models/g_losses.pkl', 'rb') as f:
             g_losses = pickle.load(f)
     else:
         d_losses = []
@@ -113,33 +115,33 @@ def train_gan(dataset, lr_g=0.0001, lr_d=0.0004, epochs=10000, noise_dim=128, ou
         scheduler_d.step()
 
         if epoch % 100 == 0:
-            print(f"Epoch [{epoch}/{epochs}]\n"
+            print_fct(f"Epoch [{epoch}/{epochs}]\n"
                   f"Avg Discriminator Loss: {d_losses[-1]:.4f}\n"
                   f"Avg Generator Loss: {g_losses[-1]:.4f}")
             for param_group in optimizer_d.param_groups:
-                print(f"Discriminator Learning Rate: {param_group['lr']:.5f}")
+                print_fct(f"Discriminator Learning Rate: {param_group['lr']:.5f}")
             for param_group in optimizer_g.param_groups:
-                print(f"Generator Learning Rate: {param_group['lr']:.5f}")
+                print_fct(f"Generator Learning Rate: {param_group['lr']:.5f}")
 
         if epoch % 1000 == 0:
-            torch.save(generator.state_dict(), f"../data/saved_models/generator_epoch_{epoch}.pth")
-            torch.save(discriminator.state_dict(), f"../data/saved_models/discriminator_epoch_{epoch}.pth")
-            torch.save(optimizer_g.state_dict(), f"../data/saved_models/optimizer_g_epoch_{epoch}.pth")
-            torch.save(optimizer_d.state_dict(), f"../data/saved_models/optimizer_d_epoch_{epoch}.pth")
+            torch.save(generator.state_dict(), f"data/saved_models/generator_epoch_{epoch}.pth")
+            torch.save(discriminator.state_dict(), f"data/saved_models/discriminator_epoch_{epoch}.pth")
+            torch.save(optimizer_g.state_dict(), f"data/saved_models/optimizer_g_epoch_{epoch}.pth")
+            torch.save(optimizer_d.state_dict(), f"data/saved_models/optimizer_d_epoch_{epoch}.pth")
 
-            with open('../data/saved_models/d_losses.pkl', 'wb') as f:
+            with open('data/saved_models/d_losses.pkl', 'wb') as f:
                 pickle.dump(d_losses, f)
 
-            with open('../data/saved_models/g_losses.pkl', 'wb') as f:
+            with open('data/saved_models/g_losses.pkl', 'wb') as f:
                 pickle.dump(g_losses, f)
 
         # Early stopping check
-        if early_stopping(d_losses[-1]):
-            print("Early stopping triggered.")
+        if es_flag and early_stopping(d_losses[-1]):
+            print_fct("Early stopping triggered.")
             break
 
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print(f"Training completed in {elapsed_time:.2f} seconds.")
+    print_fct(f"Training completed in {elapsed_time:.2f} seconds.")
 
     return generator, discriminator, d_losses, g_losses

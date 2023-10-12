@@ -1,7 +1,7 @@
 from joblib import load
 import torch
 import pandas as pd
-from src.model.gan_architecture import Generator
+from model.gan_architecture import Generator
 
 
 def load_generator(model_path, noise_dim=128, output_dim=228):
@@ -12,7 +12,7 @@ def load_generator(model_path, noise_dim=128, output_dim=228):
     return generator
 
 
-def generate_pokemon(generator, num_samples=1, noise_dim=228):
+def generate_pokemon(generator, num_samples, noise_dim=228):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     noise = torch.randn(num_samples, noise_dim).to(device)
     with torch.no_grad():
@@ -20,8 +20,8 @@ def generate_pokemon(generator, num_samples=1, noise_dim=228):
     return generated_data
 
 
-def generate_dataset(generator, scaler, num_samples=20, noise_dim=228, type1_labels=None, type2_labels=None):
-    generated_data = generate_pokemon(generator, num_samples=num_samples, noise_dim=noise_dim)
+def generate_dataset(generator, scaler, num_samples, noise_dim=228, type1_labels=None, type2_labels=None):
+    generated_data = generate_pokemon(generator, num_samples, noise_dim=noise_dim)
     inverse_transformed_data = inverse_transform_data(generated_data, scaler, type1_labels, type2_labels)
     return inverse_transformed_data
 

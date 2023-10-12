@@ -2,7 +2,7 @@ from joblib import dump
 import torch
 import matplotlib.pyplot as plt
 from src.preprocessing.data_utils import load_data, clean_data, preprocess_data, PokemonDataset
-from src.model.train_gan import train_gan
+from src.model.train_gan import train
 
 
 def main():
@@ -20,7 +20,7 @@ def main():
 
     # Train the GAN
     print("Training GAN model...")
-    generator, discriminator, d_losses, g_losses = train_gan(dataset, resume_from_epoch=None)
+    generator, discriminator, d_losses, g_losses = train(dataset, resume_from_epoch=None)
 
     # Plotting
     plt.figure(figsize=(12, 6))
