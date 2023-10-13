@@ -9,14 +9,19 @@ from model.gan_architecture import Generator, Discriminator
 from model.early_stopping import EarlyStopping
 
 
-# Hyperparameters
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# Default hyperparameters
 lr_g = 0.0001
 lr_d = 0.0004
 batch_size = 32
 epochs = 10000
 noise_dim = 128
 output_dim = 42
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+es_patience = 200
+es_delta = 0.001
+es_flag = True
+resume_from_epoch=None
 GRAD_PENALTY_WEIGHT = 10
 
 
@@ -27,13 +32,16 @@ def gradient_penalty(critic, real, fake, device="cpu"):
 
     out = critic(interpolated)
 
-    grad_out = grad(outputs=out, inputs=interpolated, grad_outputs=torch.ones_like(out), create_graph=True, retain_graph=True, only_inputs=True)[0]
+    grad_out = grad(outputs=out, inputs=interpolated, grad_outputs=torch.ones_like(out), create_graph=True,
+                    retain_graph=True, only_inputs=True)[0]
     penalty = ((grad_out.norm(2, dim=1) - 1) ** 2).mean()
     return penalty
 
 
-def train(dataset, lr_g=0.0001, lr_d=0.0004, epochs=10000, noise_dim=128, output_dim=42, resume_from_epoch=None,
-          print_fct=print, es_flag=True, es_patience=200, es_delta=0.001):
+def train(dataset, lr_g=lr_g, lr_d=lr_d, epochs=epochs, noise_dim=noise_dim, output_dim=output_dim,
+          resume_from_epoch=resume_from_epoch, print_fct=print, es_flag=es_flag, es_patience=es_patience,
+          es_delta=es_delta, batch_size=batch_size):
+
     start_time = time.time()
 
     generator = Generator(noise_dim, output_dim).to(device)

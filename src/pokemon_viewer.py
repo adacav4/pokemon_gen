@@ -1,15 +1,15 @@
-import streamlit as st
 import os
+
+import streamlit as st
 import pandas as pd
 import requests
 from matplotlib import pyplot as plt
-from torch.utils.data import DataLoader
 from joblib import load, dump
 from PIL import Image
 from io import BytesIO
 from preprocessing.data_utils import load_data, clean_data, preprocess_data, PokemonDataset
 from model.train_gan import train
-from model.generate_from_gan import load_generator, generate_dataset
+from model.generate_from_gan import load_generator, generate_dataset, get_available_checkpoints
 from descriptions.generate_descriptions import initialize_description_dataset
 
 
@@ -24,6 +24,13 @@ def load_data_st():
     return df
 
 
+def select_model_checkpoint():
+    saved_models_directory = 'data/saved_models'
+    available_epochs = get_available_checkpoints(saved_models_directory)
+    selected_epoch = st.selectbox("Select model epoch for generation", available_epochs)
+    return f'generator_epoch_{selected_epoch}.pth'
+
+
 def main_page():
     st.title("Pokémon Generator")
     st.write("Welcome to the Pokémon Generator!")
@@ -32,7 +39,7 @@ def main_page():
 def train_gan_page():
     st.title("Train a new GAN model")
 
-    # User inputs for hyperparameters
+    st.write("### Dataset:")
     dataset_path = st.text_input("Enter path for entire dataset", "data/pokemon.csv")
 
     data = load_data(dataset_path)
@@ -44,9 +51,9 @@ def train_gan_page():
 
     dataset = PokemonDataset(preprocessed_tensor)
 
-    st.write(f"Dataset:")
     st.write(data)
 
+    st.write("### Training Parameters:")
     epochs = st.number_input("Epochs", 10000)
 
     es_flag = st.checkbox("Enable Early Stopping: stops training if it the loss delta reaches the specified "
@@ -54,12 +61,30 @@ def train_gan_page():
     es_patience = st.number_input("Early Stopping patience value", 200)
     es_delta = st.number_input("Early Stopping delta threshold", format="%f", value=0.001)
 
+    lr_g = st.number_input("Generator learning rate", format="%f", value=0.0001)
+    lr_d = st.number_input("Discriminator learning rate", format="%f", value=0.0004)
+
+    batch_size = st.number_input("Batch size", 32)
+
+    resume_from_epoch = st.number_input("Resume training from epoch (-1 to start from scratch)", format="%d", value=-1)
+
+    # Display all available epoch starting points
+    available_epochs = get_available_checkpoints('data/saved_models')
+    if available_epochs:
+        st.write(f"Available checkpoints: {', '.join(map(str, available_epochs))}")
+    else:
+        st.write("No checkpoints available.")
+
+    if resume_from_epoch == -1:
+        resume_from_epoch = None
+
     if st.button("Start Training"):
         st.write("Starting training...")
-        generator, discriminator, d_losses, g_losses = train(dataset, lr_g=0.0001, lr_d=0.0004, epochs=epochs,
-                                                             noise_dim=128, output_dim=42, resume_from_epoch=None,
-                                                             print_fct=st.write, es_flag=es_flag,
-                                                             es_patience=es_patience, es_delta=es_delta)
+        generator, discriminator, d_losses, g_losses = train(dataset, lr_g=lr_g, lr_d=lr_d, epochs=epochs,
+                                                             noise_dim=128, output_dim=42,
+                                                             resume_from_epoch=resume_from_epoch, print_fct=st.write,
+                                                             es_flag=es_flag, es_patience=es_patience,
+                                                             es_delta=es_delta, batch_size=batch_size)
 
         st.write("Training finished.")
 
@@ -78,13 +103,26 @@ def train_gan_page():
 
 
 def generate_pokemon_page():
-    st.title("Generate Pokémon using the latest model")
+    st.title("Generate Pokémon using a trained model")
 
-    num_samples = int(st.number_input("Number of samples to generate"))
+    saved_models_directory = 'data/saved_models'
+
+    num_samples = int(st.number_input("Number of samples to generate", 1))
     noise_dim = 128
     output_dim = 42
     generator_path = "data/saved_models/generator.pth"
     scaler_path = "data/scaler.pkl"
+
+    # List out available checkpoints
+    available_epochs = get_available_checkpoints(saved_models_directory)
+    available_epochs.insert(0, "Final Model")  # Add an option for the final model
+    selected_epoch = st.selectbox("Select specific model checkpoint for generation", available_epochs)
+
+    # Determine the generator path based on user's selection
+    if selected_epoch == "Final Model":
+        generator_path = os.path.join(saved_models_directory, 'generator.pth')
+    else:
+        generator_path = os.path.join(saved_models_directory, f'generator_epoch_{selected_epoch}.pth')
 
     if st.button("Generate"):
         st.write("Generating Pokémon...")

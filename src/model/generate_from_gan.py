@@ -1,7 +1,28 @@
+import os
 from joblib import load
 import torch
 import pandas as pd
 from model.gan_architecture import Generator
+
+
+def get_available_checkpoints(directory):
+    files = os.listdir(directory)
+
+    # Get epochs from discriminator, generator, optimizer_g, and optimizer_d files
+    discriminator_epochs = [int(f.split('_')[-1].split('.')[0]) for f in files if
+                            "discriminator_epoch_" in f and f.endswith(".pth")]
+    generator_epochs = [int(f.split('_')[-1].split('.')[0]) for f in files if
+                        "generator_epoch_" in f and f.endswith(".pth")]
+    optimizer_g_epochs = [int(f.split('_')[-1].split('.')[0]) for f in files if
+                          "optimizer_g_epoch_" in f and f.endswith(".pth")]
+    optimizer_d_epochs = [int(f.split('_')[-1].split('.')[0]) for f in files if
+                          "optimizer_d_epoch_" in f and f.endswith(".pth")]
+
+    # Determine epochs for which all associated files exist
+    complete_epochs = set(discriminator_epochs) & set(generator_epochs) & set(optimizer_g_epochs) & set(
+        optimizer_d_epochs)
+
+    return sorted(list(complete_epochs))
 
 
 def load_generator(model_path, noise_dim=128, output_dim=228):
