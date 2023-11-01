@@ -89,8 +89,8 @@ def train_gan_page():
         st.write("Training finished.")
 
         plt.figure(figsize=(12, 6))
-        plt.plot(d_losses, label='Discriminator Loss')
-        plt.plot(g_losses, label='Generator Loss')
+        plt.plot(d_losses, label='Generator Loss')
+        plt.plot(g_losses, label='Discriminator Loss')
         plt.xlabel('Iteration')
         plt.ylabel('Loss')
         plt.title('Training Losses')
