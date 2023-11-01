@@ -41,7 +41,7 @@ def generate_pokemon(generator, num_samples, noise_dim=228):
     return generated_data
 
 
-def generate_dataset(generator, scaler, num_samples, noise_dim=228, type1_labels=None, type2_labels=None):
+def generate_dataset(generator, scaler, num_samples, noise_dim=128, type1_labels=None, type2_labels=None):
     generated_data = generate_pokemon(generator, num_samples, noise_dim=noise_dim)
     inverse_transformed_data = inverse_transform_data(generated_data, scaler, type1_labels, type2_labels)
     return inverse_transformed_data
