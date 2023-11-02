@@ -54,17 +54,17 @@ def train_gan_page():
     st.write(data)
 
     st.write("### Training Parameters:")
-    epochs = st.number_input("Epochs", 10000)
+    epochs = st.number_input("Epochs", min_value=1, value=10000)
 
     es_flag = st.checkbox("Enable Early Stopping: stops training if it the loss delta reaches the specified "
                           "delta threshold", value=True)
-    es_patience = st.number_input("Early Stopping patience value", 200)
-    es_delta = st.number_input("Early Stopping delta threshold", format="%f", value=0.001)
+    es_patience = st.number_input("Early Stopping patience value", min_value=1, value=200)
+    es_delta = st.number_input("Early Stopping delta threshold", format="%f", min_value=0.000001, value=0.001)
 
-    lr_g = st.number_input("Generator learning rate", format="%f", value=0.0001)
-    lr_d = st.number_input("Discriminator learning rate", format="%f", value=0.0004)
+    lr_g = st.number_input("Generator learning rate", format="%f", min_value=0.000001, value=0.0001)
+    lr_d = st.number_input("Discriminator learning rate", format="%f", min_value=0.000001, value=0.0004)
 
-    batch_size = st.number_input("Batch size", 32)
+    batch_size = st.number_input("Batch size", min_value=1, value=32)
 
     resume_from_epoch = st.number_input("Resume training from epoch (-1 to start from scratch)", format="%d", value=-1)
 
