@@ -61,6 +61,8 @@ def train_gan_page():
     es_patience = st.number_input("Early Stopping patience value", min_value=1, value=200)
     es_delta = st.number_input("Early Stopping delta threshold", format="%f", min_value=0.000001, value=0.001)
 
+    noise_dim = st.number_input("Noise dimension", min_value=1, value=128)
+
     lr_g = st.number_input("Generator learning rate", format="%f", min_value=0.000001, value=0.0001)
     lr_d = st.number_input("Discriminator learning rate", format="%f", min_value=0.000001, value=0.0004)
 
@@ -81,7 +83,7 @@ def train_gan_page():
     if st.button("Start Training"):
         st.write("Starting training...")
         generator, discriminator, d_losses, g_losses = train(dataset, lr_g=lr_g, lr_d=lr_d, epochs=epochs,
-                                                             noise_dim=128, output_dim=42,
+                                                             noise_dim=noise_dim, output_dim=42,
                                                              resume_from_epoch=resume_from_epoch, print_fct=st.write,
                                                              es_flag=es_flag, es_patience=es_patience,
                                                              es_delta=es_delta, batch_size=batch_size)
