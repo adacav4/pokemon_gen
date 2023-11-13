@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.autograd import grad
 from torch.utils.data import DataLoader
+import torch.nn.functional as F
 from model.gan_architecture import Generator, Discriminator
 from model.early_stopping import EarlyStopping
 
@@ -106,11 +107,18 @@ def train(dataset, lr_g=lr_g, lr_d=lr_d, epochs=epochs, noise_dim=noise_dim, out
 
             optimizer_g.zero_grad()
 
+            # Generate fake data
+            noise = torch.randn(current_batch_size, noise_dim).to(device)
+            fake_data = generator(noise)
             logits_fake = discriminator(fake_data)
-            real_features = discriminator(real_data).detach()
-            fake_features = discriminator(fake_data)
-            loss_g = torch.abs(real_features - fake_features).mean()
 
+            # Feature matching
+            real_features = discriminator.extract_features(real_data)
+            fake_features = discriminator.extract_features(fake_data)
+            feature_matching_loss = F.l1_loss(fake_features, real_features.detach())
+
+            # Update the generator based on the sum of the original generator's loss and the feature matching loss
+            loss_g = criterion(logits_fake, real_labels) + feature_matching_loss
             loss_g.backward()
             optimizer_g.step()
 

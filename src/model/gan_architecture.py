@@ -54,3 +54,11 @@ class Discriminator(nn.Module):
         x = F.leaky_relu(self.layer_norm3(self.fc3(x)), 0.1)
         x = F.dropout(x, 0.4)
         return torch.sigmoid(self.fc4(x))
+
+    def extract_features(self, x):
+        x = F.leaky_relu(self.layer_norm1(self.fc1(x)), 0.1)
+        x = F.dropout(x, 0.4)
+        x = F.leaky_relu(self.layer_norm2(self.fc2(x)), 0.1)
+        x = F.dropout(x, 0.4)
+        x = F.leaky_relu(self.layer_norm3(self.fc3(x)), 0.1)
+        return x
